@@ -84,7 +84,27 @@ class BinaryDownloader:
 			self.binary_name, remote_url, local_filename, target_path)
 		return target_path
 
-	def execute_binary(self,
+	def handle_arguments(self, args: argparse.Namespace) -> None:
+		"""
+		Handle the arguments that were parsed from the argument parser.
+
+		You must call this function before calling download_binary or execute_binary.
+
+		Args:
+			args: The args parsed from the argument parser.
+		"""
+		self._handle_arguments_called = True
+		self.override_path = getattr(args, f"override_{self.binary_name}_path", None)
+		self.override_url = getattr(args, f"override_{self.binary_name}_url", None)
+
+	def remote_binary_url(self) -> str:
+		"""Get the remote URL to use when downloading the binary."""
+		return self.override_url or REMOTE_URL.format(
+			binary_name=self.binary_name,
+			version=self.version,
+		)
+
+	def run_binary(self,
 			args: Iterable[str],
 			capture_output=True,
 			check=True,
@@ -117,26 +137,6 @@ class BinaryDownloader:
 			check=check,
 			encoding=encoding,
 			**kwargs)
-
-	def handle_arguments(self, args: argparse.Namespace) -> None:
-		"""
-		Handle the arguments that were parsed from the argument parser.
-
-		You must call this function before calling download_binary or execute_binary.
-
-		Args:
-			args: The args parsed from the argument parser.
-		"""
-		self._handle_arguments_called = True
-		self.override_path = getattr(args, f"override_{self.binary_name}_path", None)
-		self.override_url = getattr(args, f"override_{self.binary_name}_url", None)
-
-	def remote_binary_url(self) -> str:
-		"""Get the remote URL to use when downloading the binary."""
-		return self.override_url or REMOTE_URL.format(
-			binary_name=self.binary_name,
-			version=self.version,
-		)
 
 def fix_file_permissions(target_path: str) -> None:
 	"""Set the correct executable file permission flags.
