@@ -121,6 +121,11 @@ class BinaryDownloader:
 		Returns:
 			The completed subprocess.run result.
 		"""
+		if not all((self._handle_arguments_called, self._add_arguments_called)):
+			LOGGER.warning(
+				"Looks like you haven't called BinaryDownloader.add_arguments() and "
+				"BinaryDownloader.handle_arguments(). This means your users can't "
+				"customize the binary downloader behavior.")
 		if self.override_path:
 			binary_path = self.override_path
 		else:
