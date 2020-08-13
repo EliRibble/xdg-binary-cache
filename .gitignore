@@ -1,0 +1,4 @@
+__pycache__/
+xdg_binary_cache.egg-info/
+.mypy_cache/
+dist/
