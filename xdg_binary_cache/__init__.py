@@ -9,7 +9,7 @@ import subprocess
 import urllib.request
 
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("xdg_binary_cache")
 
 # The pattern that defines where to find the binary remotely.
 REMOTE_URL = (
