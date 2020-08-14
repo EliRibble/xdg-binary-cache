@@ -85,6 +85,7 @@ class BinaryDownloader:
 			LOGGER.debug("Already found %s at %s", self.binary_name, target_path)
 			return target_path
 		remote_url = self.remote_binary_url()
+		LOGGER.info("Downloading %s version %s from %s", self.binary_name, self.version, remote_url)
 		local_filename, _ = urllib.request.urlretrieve(remote_url)
 		try:
 			os.makedirs(os.path.dirname(target_path), exist_ok=True)
