@@ -112,8 +112,9 @@ class BinaryDownloader:
 			args: The args parsed from the argument parser.
 		"""
 		self._handle_arguments_called = True
-		self.override_path = getattr(args, f"override_{self.binary_name}_path", None)
-		self.override_url = getattr(args, f"override_{self.binary_name}_url", None)
+		binary_name_no_hyphens = self.binary_name.replace("-", "_")
+		self.override_path = getattr(args, f"override_{binary_name_no_hyphens}_path", None)
+		self.override_url = getattr(args, f"override_{binary_name_no_hyphens}_url", None)
 
 	def skip_arguments(self) -> None:
 		"""
