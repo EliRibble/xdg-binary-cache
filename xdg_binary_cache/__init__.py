@@ -106,6 +106,13 @@ class BinaryDownloader:
 		self.override_path = getattr(args, f"override_{self.binary_name}_path", None)
 		self.override_url = getattr(args, f"override_{self.binary_name}_url", None)
 
+	def skip_arguments(self) -> None:
+		"""
+		Skip handling arguments. This should only be used for tests.
+		"""
+		self._add_arguments_called = True
+		self._handle_arguments_called = True
+
 	def remote_binary_url(self) -> str:
 		"""Get the remote URL to use when downloading the binary."""
 		return self.override_url or REMOTE_URL.format(
