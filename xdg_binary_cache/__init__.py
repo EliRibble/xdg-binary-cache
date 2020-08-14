@@ -82,7 +82,7 @@ class BinaryDownloader:
 		"""
 		target_path = self.cached_binary_path()
 		if os.path.exists(target_path):
-			LOGGER.info("Already found %s at %s", self.binary_name, target_path)
+			LOGGER.debug("Already found %s at %s", self.binary_name, target_path)
 			return target_path
 		remote_url = self.remote_binary_url()
 		local_filename, _ = urllib.request.urlretrieve(remote_url)
