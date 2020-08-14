@@ -86,6 +86,7 @@ class BinaryDownloader:
 			return target_path
 		remote_url = self.remote_binary_url()
 		local_filename, _ = urllib.request.urlretrieve(remote_url)
+		os.makedirs(os.path.dirname(target_path), exist_ok=True)
 		shutil.move(local_filename, target_path)
 		fix_file_permissions(target_path)
 		LOGGER.info("Downloaded %s from %s to %s and then moved to %s",
