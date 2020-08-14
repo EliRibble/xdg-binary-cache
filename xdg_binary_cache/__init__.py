@@ -48,11 +48,19 @@ class BinaryDownloader:
 		self._add_arguments_called = True
 		parser.add_argument(
 			f"--override-{self.binary_name}-path",
-			help=f"Specify a path to a specific version of {self.binary_name} to use.",
+			help=(f"Specify a path to a specific version of {self.binary_name} to use. "
+				f"If this is provided then {self.binary_name} will not be downloaded but "
+				"instead the local copy will be used directly."),
 		)
+		target_download_path = self.cached_binary_path()
 		parser.add_argument(
 			f"--override-{self.binary_name}-url",
-			help=f"Specify a URL to use when downloading {self.binary_name}.",
+			help=(f"Specify a URL to use when downloading {self.binary_name}. "
+				f"If this is provided then if no copy of {self.binary_name} exists "
+				f"at {target_download_path} then a copy will be downloaded from this "
+				f"URL. If the URL provided contains a version of {self.binary_name} "
+				f"other than {self.version}, it may be confusing since {self.version} "
+				f"is part of the path '{target_download_path}'."),
 		)
 
 	def cached_binary_path(self) -> str:
