@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import stat
+import time
 from typing import Iterable
 import subprocess
 import urllib.request
@@ -103,6 +104,30 @@ class BinaryDownloader:
 			self.binary_name, remote_url, local_filename, target_path)
 		return target_path
 
+	def download_binary_with_retry(self, retries: int = 3) -> str:
+		"""
+		Download the remote binary and use retries.
+
+		This function exists to allow for parallelism in client code that
+		such that multiple instances of this library may be attempting to write to
+		the same target file at the same time.
+
+		Returns:
+			The absolute path to the downloaded file.
+		"""
+		attempt = 1
+		while True:
+			try:
+				return self.download_binary()
+			except OSError as ex:
+				LOGGER.info("Failed to download: %s. Attempt %d of %d",
+					ex, attempt, retries)
+				time.sleep(attempt**2)
+				attempt += 1
+				if attempt == retries:
+					raise
+
+
 	def handle_arguments(self, args: argparse.Namespace) -> None:
 		"""
 		Handle the arguments that were parsed from the argument parser.
@@ -156,7 +181,7 @@ class BinaryDownloader:
 		if self.override_path:
 			binary_path = self.override_path
 		else:
-			binary_path = self.download_binary()
+			binary_path = self.download_binary_with_retry()
 		cmd = [binary_path] + list(args)
 		# Translate capture_output parameters for Python 3.6 compatibility
 		if capture_output:
