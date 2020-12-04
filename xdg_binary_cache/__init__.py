@@ -2,10 +2,11 @@
 import argparse
 import logging
 import os
+from pathlib import Path
 import shutil
 import stat
 import time
-from typing import Iterable
+from typing import Iterable, Optional
 import subprocess
 import urllib.request
 
@@ -36,8 +37,8 @@ class BinaryDownloader:
 		self._handle_arguments_called = False
 
 		self.binary_name = binary_name
-		self.override_path = None
-		self.override_url = None
+		self.override_path: Optional[Path] = None
+		self.override_url: Optional[str] = None
 		self.version = version
 
 	def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -49,6 +50,7 @@ class BinaryDownloader:
 		self._add_arguments_called = True
 		parser.add_argument(
 			f"--override-{self.binary_name}-path",
+			type=Path,
 			help=(f"Specify a path to a specific version of {self.binary_name} to use. "
 				f"If this is provided then {self.binary_name} will not be downloaded but "
 				"instead the local copy will be used directly."),
@@ -64,17 +66,17 @@ class BinaryDownloader:
 				f"is part of the path '{target_download_path}'."),
 		)
 
-	def cached_binary_path(self) -> str:
+	def cached_binary_path(self) -> Path:
 		"Get the path to the cached binary file on the local host."
-		return os.path.join(self.cached_binary_root(), self.version, self.binary_name)
+		return self.cached_binary_root() / self.version / self.binary_name
 
-	def cached_binary_root(self) -> str:
+	def cached_binary_root(self) -> Path:
 		"Get the path to the root directory for the cached binary on the local host."
-		cached_path = os.environ.get("XDG_CACHE_HOME",
-			os.path.join(os.environ["HOME"], ".cache"))
-		return os.path.join(cached_path, self.binary_name)
+		cached_path = Path(os.environ.get("XDG_CACHE_HOME",
+			os.path.join(os.environ["HOME"], ".cache")))
+		return cached_path / self.binary_name
 
-	def download_binary(self) -> str:
+	def download_binary(self) -> Path:
 		"""
 		Download the remote binary to the local cache.
 
@@ -82,24 +84,23 @@ class BinaryDownloader:
 			The absolute path to the downloaded file.
 		"""
 		target_path = self.cached_binary_path()
-		if os.path.exists(target_path):
-			LOGGER.debug("Already found %s at %s", self.binary_name, target_path)
+		if target_path.exists():
+			LOGGER.info("Using previously downloaded %s at %s", self.binary_name, target_path)
 			return target_path
 		remote_url = self.remote_binary_url()
 		LOGGER.info("Downloading %s version %s from %s", self.binary_name, self.version, remote_url)
 		local_filename, _ = urllib.request.urlretrieve(remote_url)
 		try:
-			os.makedirs(os.path.dirname(target_path), exist_ok=True)
+			target_path.parent.mkdir(parents=True, exist_ok=True)
 		except NotADirectoryError:
 			# It could be that there exists an old cached binary at $XDG_CACHE_HOME/{binary_name}
 			# from a previous version of this logic. We need to clear it out to make
 			# room for this new logic.
 			root = self.cached_binary_root()
-			if os.path.exists(root):
+			if root.exists():
 				os.unlink(root)
-			os.makedirs(os.path.dirname(target_path), exist_ok=True)
-		shutil.move(local_filename, target_path)
-		fix_file_permissions(target_path)
+			target_path.parent.mkdir(parents=True, exist_ok=True)
+		fix_file_permissions(Path(local_filename))
 		LOGGER.info("Downloaded %s from %s to %s and then moved to %s",
 			self.binary_name, remote_url, local_filename, target_path)
 		return target_path
@@ -139,7 +140,7 @@ class BinaryDownloader:
 		"""
 		self._handle_arguments_called = True
 		binary_name_no_hyphens = self.binary_name.replace("-", "_")
-		self.override_path = getattr(args, f"override_{binary_name_no_hyphens}_path", None)
+		self.override_path = Path(getattr(args, f"override_{binary_name_no_hyphens}_path", None))
 		self.override_url = getattr(args, f"override_{binary_name_no_hyphens}_url", None)
 
 	def skip_arguments(self) -> None:
@@ -195,7 +196,7 @@ class BinaryDownloader:
 			encoding=encoding,
 			**kwargs)
 
-def fix_file_permissions(target_path: str) -> None:
+def fix_file_permissions(target_path: Path) -> None:
 	"""Set the correct executable file permission flags.
 
 	Args:
