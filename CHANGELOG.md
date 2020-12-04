@@ -2,6 +2,7 @@
 
 ## 1.3
 
+* Use fcntl.flock() to coordinate parallel runs attemting to download the binary at the same time
 * Move to using pathlib.Path rather than raw strings for most APIs
 
 ## 1.2

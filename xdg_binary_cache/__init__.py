@@ -1,12 +1,14 @@
 """All the logic for xdg-binay-cache."""
 import argparse
+import contextlib
+import fcntl
 import logging
 import os
 from pathlib import Path
 import shutil
 import stat
 import time
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 import subprocess
 import urllib.request
 
@@ -100,34 +102,16 @@ class BinaryDownloader:
 			if root.exists():
 				os.unlink(root)
 			target_path.parent.mkdir(parents=True, exist_ok=True)
+		# Fix file permissions on the source temporary file before moving. We
+		# do this because as soon as we move to the final location we will release
+		# the lock on the file and other processes may attempt to execute it.
 		fix_file_permissions(Path(local_filename))
+		LOGGER.debug("Getting IPCLock on %s", target_path)
+		with lock_exclusive(target_path):
+			shutil.move(local_filename, target_path)
 		LOGGER.info("Downloaded %s from %s to %s and then moved to %s",
 			self.binary_name, remote_url, local_filename, target_path)
 		return target_path
-
-	def download_binary_with_retry(self, retries: int = 3) -> str:
-		"""
-		Download the remote binary and use retries.
-
-		This function exists to allow for parallelism in client code that
-		such that multiple instances of this library may be attempting to write to
-		the same target file at the same time.
-
-		Returns:
-			The absolute path to the downloaded file.
-		"""
-		attempt = 1
-		while True:
-			try:
-				return self.download_binary()
-			except OSError as ex:
-				LOGGER.info("Failed to download: %s. Attempt %d of %d",
-					ex, attempt, retries)
-				time.sleep(attempt**2)
-				attempt += 1
-				if attempt == retries:
-					raise
-
 
 	def handle_arguments(self, args: argparse.Namespace) -> None:
 		"""
@@ -182,14 +166,15 @@ class BinaryDownloader:
 		if self.override_path:
 			binary_path = self.override_path
 		else:
-			binary_path = self.download_binary_with_retry()
-		cmd = [binary_path] + list(args)
+			binary_path = self.download_binary()
+		cmd = [str(binary_path)] + list(args)
 		# Translate capture_output parameters for Python 3.6 compatibility
 		if capture_output:
 			if "stderr" in kwargs or "stdout" in kwargs:
 				raise ValueError("Do not specify both capture_output and stdout/stderr")
 			kwargs["stderr"] = subprocess.PIPE
 			kwargs["stdout"] = subprocess.PIPE
+		lock_shared(binary_path)
 		return subprocess.run(
 			cmd,
 			check=check,
@@ -209,3 +194,38 @@ def fix_file_permissions(target_path: Path) -> None:
 			stat.S_IROTH | stat.S_IXOTH))
 	except OSError as ex:
 		LOGGER.warning("Failed to set chmod 755 for %s: %s", target_path, ex)
+
+@contextlib.contextmanager
+def lock_exclusive(path: Path) -> Iterator[None]:
+	"""Exclusively lock the given file path with the OS for all processes.
+
+	This is used to ensure that multiple instances of programs using this
+	library cooperate and don't write to the file at the same time.
+	"""
+	LOGGER.debug("Getting exclusive lock on %s", path)
+	if not path.exists():
+		path.parent.mkdir(parents=True, exist_ok=True)
+		path.touch()
+	with open(path, "r") as target_file:
+		fcntl.flock(target_file, fcntl.LOCK_EX)
+		LOGGER.debug("Got exclusive lock on %s", path)
+		yield
+		fcntl.flock(target_file, fcntl.LOCK_UN)
+		LOGGER.debug("Released exclusive lock on %s", path)
+
+def lock_shared(path: Path) -> None:
+	"""Get and release a shared lock on the given path.
+
+	This function aquires AND IMMEDIATELY RELEASES a shared lock on a given
+	file path. The purpose is just to wait on any exclusive locks, not to
+	prevent additional exclusive locks from being aquired. This is because
+	the nature of this program is that we need to subprocess.call the file
+	we are locking which we can't do while a lock is held - at least, I don't
+	think we can, and tests show I can't trivially.
+	"""
+	LOGGER.debug("Getting shared lock on %s", path)
+	with open(path, "r") as target_file:
+		fcntl.flock(target_file, fcntl.LOCK_SH)
+		LOGGER.debug("Got shared lock on %s", path)
+		fcntl.flock(target_file, fcntl.LOCK_UN)
+		LOGGER.debug("Released shared lock on %s", path)
