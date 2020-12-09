@@ -124,7 +124,8 @@ class BinaryDownloader:
 		"""
 		self._handle_arguments_called = True
 		binary_name_no_hyphens = self.binary_name.replace("-", "_")
-		self.override_path = Path(getattr(args, f"override_{binary_name_no_hyphens}_path", None))
+		override_path = getattr(args, f"override_{binary_name_no_hyphens}_path", None)
+		self.override_path = override_path and Path(override_path)
 		self.override_url = getattr(args, f"override_{binary_name_no_hyphens}_url", None)
 
 	def skip_arguments(self) -> None:

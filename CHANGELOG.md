@@ -1,5 +1,9 @@
 # xdg-binary-cache Changelog
 
+## 1.4
+
+* Fix bug introduced in 1.3 which failed to handle situations where argument flags were not provided.
+
 ## 1.3
 
 * Use fcntl.flock() to coordinate parallel runs attemting to download the binary at the same time
