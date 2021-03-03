@@ -1,5 +1,10 @@
 # xdg-binary-cache Changelog
 
+## 1.5
+
+* Reduce log messages about using previously downloaded binary - they are debug-only now
+* Print information on failed command during Unicode decode errors.
+
 ## 1.4
 
 * Fix bug introduced in 1.3 which failed to handle situations where argument flags were not provided.
