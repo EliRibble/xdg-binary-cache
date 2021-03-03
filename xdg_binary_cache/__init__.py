@@ -87,7 +87,7 @@ class BinaryDownloader:
 		"""
 		target_path = self.cached_binary_path()
 		if target_path.exists():
-			LOGGER.info("Using previously downloaded %s at %s", self.binary_name, target_path)
+			LOGGER.debug("Using previously downloaded %s at %s", self.binary_name, target_path)
 			return target_path
 		remote_url = self.remote_binary_url()
 		LOGGER.info("Downloading %s version %s from %s", self.binary_name, self.version, remote_url)
