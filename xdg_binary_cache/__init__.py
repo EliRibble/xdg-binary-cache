@@ -176,11 +176,15 @@ class BinaryDownloader:
 			kwargs["stderr"] = subprocess.PIPE
 			kwargs["stdout"] = subprocess.PIPE
 		lock_shared(binary_path)
-		return subprocess.run(
-			cmd,
-			check=check,
-			encoding=encoding,
-			**kwargs)
+		try:
+			return subprocess.run(
+				cmd,
+				check=check,
+				encoding=encoding,
+				**kwargs)
+		except UnicodeDecodeError as ex:
+			LOGGER.error("Failed to execute %s: %s", cmd, ex)
+			raise
 
 def fix_file_permissions(target_path: Path) -> None:
 	"""Set the correct executable file permission flags.
